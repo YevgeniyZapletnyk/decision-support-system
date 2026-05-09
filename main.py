@@ -79,8 +79,11 @@ class DSSApp(tk.Tk):
         ttk.Label(control, text="CSV файл або URL:").grid(
             row=0, column=0, sticky="w", padx=(0, 8))
         self.expert_source_var = tk.StringVar()
-        ttk.Entry(control, textvariable=self.expert_source_var).grid(
-            row=0, column=1, sticky="ew")
+        self.expert_entry = tk.Entry(
+            control, textvariable=self.expert_source_var)
+        self.expert_entry.grid(row=0, column=1, sticky="ew")
+        self.expert_entry.bind("<Control-v>", self._paste_text)
+        self.expert_entry.focus()
         ttk.Button(control, text="Огляд", command=self._browse_csv).grid(
             row=0, column=2, padx=8)
 
@@ -339,6 +342,15 @@ class DSSApp(tk.Tk):
         path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
         if path:
             self.expert_source_var.set(path)
+
+    def _paste_text(self, event: tk.Event) -> str:
+        try:
+            text = self.clipboard_get()
+            self.expert_entry.delete(0, tk.END)
+            self.expert_entry.insert(0, text)
+        except Exception:
+            pass
+        return "break"
 
     def set_status(self, text: str) -> None:
         self.status_var.set(text)

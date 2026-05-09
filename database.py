@@ -259,9 +259,37 @@ class Database:
                                          "$set": {"weight": normalized[criterion_id]}})
         return normalized
 
+    def _normalize_google_sheets_url(self, source: str) -> str:
+        parsed = urlparse(source)
+        if parsed.netloc != "docs.google.com":
+            return source
+
+        path = parsed.path
+        if "/spreadsheets/d/" not in path:
+            return source
+
+        parts = path.split("/")
+        try:
+            file_id = parts[parts.index("d") + 1]
+        except (ValueError, IndexError):
+            return source
+
+        query = parsed.query
+        gid = None
+        for part in query.split("&"):
+            if part.startswith("gid="):
+                gid = part.split("=", 1)[1]
+                break
+
+        export_url = f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=csv"
+        if gid:
+            export_url += f"&gid={gid}"
+        return export_url
+
     def _read_csv_rows(self, source: str) -> List[Dict[str, str]]:
         parsed = urlparse(source)
         if parsed.scheme in {"http", "https"}:
+            source = self._normalize_google_sheets_url(source)
             with urlopen(source) as response:
                 content = response.read().decode("utf-8-sig")
                 return list(csv.DictReader(content.splitlines()))
